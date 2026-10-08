@@ -6,43 +6,52 @@ import javax.swing.JOptionPane;
 public class ColetarDados {
 
     public static void main(String[] args) throws Exception {
-        String nomePersonagem = JOptionPane.showInputDialog("Digite o nome do persoangem: ");
+        String nomePersonagem = JOptionPane.showInputDialog("Digite o nome do personagem:");
+        if (nomePersonagem == null || nomePersonagem.trim().isEmpty()) {
+            return; 
+        }
+
         String[] categorias = {"Inteligencia", "Força", "Velocidade", "Resistencia", "Habilidade"};
+        String sql = "INSERT INTO Personagem (nome, categoria, valor) VALUES (?, ?, ?)";
+        StringBuilder valores = new StringBuilder();
 
-        String url = "jdbc:sqlserver://DESKTOP-09V9M6S\\SQLEXPRESS;databaseName=teste;encrypt=true;trustServerCertificate=true;";
-        String user = "javauser";
-        String password = "123456";
-        String sql = "INSERT INTO Personagem (nome, categoria, valor) VALUES(?,?,?)";
-
-        try (Connection conexao = java.sql.DriverManager.getConnection(url, user, password)) {
+        try (Connection conexao = Conexao.conectar("teste");
+             PreparedStatement stmt = conexao.prepareStatement(sql)) {
 
             for (String categoria : categorias) {
-                String valorTexto = JOptionPane.showInputDialog("Digite o valor para " + categoria + ": ");
-                int valor = Integer.parseInt(valorTexto);
-
-                  
-                    try(PreparedStatement stmt = conexao.prepareStatement(sql)){
-                    stmt.setString(1, nomePersonagem);
-                    stmt.setString(2, categoria);
-                    stmt.setInt(3, valor);
-                    stmt.executeUpadate();
+                String valorTexto = JOptionPane.showInputDialog("Digite o valor para " + categoria + ":");
+                if (valorTexto == null) {
+                    return;
                 }
+                int valor = Integer.parseInt(valorTexto.trim());
+
+                stmt.setString(1, nomePersonagem);
+                stmt.setString(2, categoria);
+                stmt.setInt(3, valor);
+                stmt.executeUpdate();
+
+                valores.append(valor).append(",");
             }
-        JOptionPane.showMessageDialog(null, "Dados salvos com sucesso!");
-          
-        }catch(SQLException e){
-            JOptionPane.showMessageDialog(null, "Erro ao inserir dados: ");
+
+            JOptionPane.showMessageDialog(null, "Dados salvos com sucesso!");
+
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(null, "Digite apenas números inteiros.");
+            return;
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(null, "Erro ao inserir dados: " + e.getMessage());
             e.printStackTrace();
-    }
+            return; 
+        }
 
-        String valoresFinal = valores.substring(0, valores.length() - 1); // Remove the last newline character
+    
+        String valoresFinal = valores.substring(0, valores.length() - 1);
 
-        ProcessBuilder pb = new ProcessBuilder("python3", "grafico.py", valoresFinal);
+        ProcessBuilder pb = new ProcessBuilder("python", "grafico.py", valoresFinal);
         pb.inheritIO();
         Process processo = pb.start();
         processo.waitFor();
 
         JOptionPane.showMessageDialog(null, "Valores coletados e gráfico gerado com sucesso!");
-
-    }   
+    }
 }
